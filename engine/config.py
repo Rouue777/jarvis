@@ -1,0 +1,1 @@
+ASSISTANT_NAME = "sexta-feira"
