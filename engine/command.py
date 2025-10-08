@@ -5,6 +5,8 @@ import time
 
 
 
+
+
 def speak(text):   
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
@@ -21,6 +23,7 @@ def takeCommand():
     with sr.Microphone() as source:
         print('listening...')
         eel.DisplayMessage('listening...')
+        print('listening...')
         r.pause_threshold = 1
         r.adjust_for_ambient_noise(source)
         try:
@@ -49,7 +52,6 @@ def allCommands(message=1):
     from engine.features import findContact, whatsApp
 
     while True:
-
         if message == 1:
             query = takeCommand()
             print(query)
@@ -57,17 +59,59 @@ def allCommands(message=1):
         else:
             query = message
             eel.senderText(query)
-            
 
         try:
+            # abrir programas/sites
             if "abrir" in query.lower():
                 from engine.features import openCommand
                 openCommand(query)
 
-            elif "no youtube" in query.lower() or "tocar" in query.lower() or "play" in query.lower():
-                from engine.features import PlayYoutube
-                PlayYoutube(query)
+            #### comandos spotify ####
+            elif "spotify" in query.lower() or "no spotify" in query.lower():
+                # tocar no spotify
+                if any(word in query.lower() for word in ["toca","joga","jogar", "tocar", "reproduzir"]):
+                    if "playlist" in query.lower() or "playlists" in query.lower():
+                        
+                        # tocar playlist
+                        from engine.spotify import play_playlist
+                        print("Spotify Play Playlist = " + query)
+                        play_playlist(query)
+                    else:
+                        # tocar música avulsa
+                        from engine.spotify import playSpotify
+                        print("Spotify Play Música = " + query)
+                        playSpotify(query)
 
+                # pausar musica no spotify
+                elif "pause" in query.lower() or "pausar" in query.lower() or "parar" in query.lower():                 
+                    from engine.spotify import pauseSpotify
+                    print("Spotify Pause = " + query)
+                    pauseSpotify()
+
+                # próxima música no spotify
+                elif "next" in query.lower() or "próxima" in query.lower() or "pular" in query.lower():
+                    from engine.spotify import next_track
+                    next_track()
+
+                # voltar música no spotify
+                elif "voltar" in query.lower() or "anterior" in query.lower() or "música anterior" in query.lower():
+                    from engine.spotify import previous_track
+                    previous_track()
+
+                # play / resume música no spotify
+                elif "play" in query.lower() or "resumir" in query.lower() or "continuar" in query.lower():
+                    from engine.spotify import resumeSpotify
+                    print("Spotify Resume função")
+                    resumeSpotify()
+
+            #### comandos youtube ####
+            elif "youtube" in query.lower():
+                if any(word in query.lower() for word in ["play", "tocar", "reproduzir"]):
+                    from engine.features import PlayYoutube
+                    print("YouTube Play = " + query)
+                    PlayYoutube(query)
+
+            #### comandos whatsapp ####
             elif ("enviar mensagem" in query.lower() or 
                   "mandar mensagem" in query.lower() or 
                   "ligar" in query.lower() or 
@@ -85,7 +129,7 @@ def allCommands(message=1):
                         print(query)
                         flag = 'mensagem'
                         speak("Qual mensagem você quer enviar?")
-                        message_text = takeCommand()  # aqui você captura a mensagem do usuário
+                        message_text = takeCommand()  # captura a mensagem do usuário
 
                     elif "ligar" in query or "fazer ligação" in query:
                         flag = 'chamada de voz'
@@ -95,7 +139,6 @@ def allCommands(message=1):
 
                     # Chama a função whatsapp apenas uma vez, com os parâmetros corretos
                     whatsApp(contact_no, message_text, flag, name)
-
                 else:
                     speak("Não consegui encontrar esse contato.")
 
@@ -108,5 +151,6 @@ def allCommands(message=1):
 
         eel.ShowHood()
         break  # sai do loop depois de executar um comando válido
+
 
 

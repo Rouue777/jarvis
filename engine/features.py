@@ -19,6 +19,10 @@ from engine.helper import remove_words
 from urllib.parse import quote
 import subprocess
 import pyautogui
+from engine.spotify import sp
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+
 
 con = sqlite3.connect('sexta-feira.db')
 
@@ -116,7 +120,7 @@ def hotword():
     try:
        
         # pre trained keywords    
-        porcupine=pvporcupine.create(keywords=["jarvis","alexa"])
+        porcupine=pvporcupine.create(keywords=["alexa"])
         paud=pyaudio.PyAudio()
         audio_stream=paud.open(rate=porcupine.sample_rate,channels=1,format=pyaudio.paInt16,input=True,frames_per_buffer=porcupine.frame_length)
         
@@ -138,6 +142,8 @@ def hotword():
                 autogui.press("j")
                 time.sleep(2)
                 autogui.keyUp("win")
+                 
+    
                 
     except:
         if porcupine is not None:
@@ -157,7 +163,7 @@ def findContact(query):
     'mandar', 'enviar',
     'mensagem', 'áudio', 'vídeo',
     'zap', 'whatsapp', 'sms',
-    'para', 'pro', 'a', 'o', 'um', 'uma', 'de','para o','pra'
+    'para', 'pro', 'a', 'o',' no', 'um', 'uma', 'de','para o','pra'
 ]
     query = remove_words(query, words_to_remove)
     print("Query final após limpeza:", query)
@@ -220,6 +226,56 @@ def whatsApp(mobile_no, message, flag, name):
 
     pyautogui.hotkey('enter')
     speak(jarvis_message)
+
+
+
+##play musica no spotify
+
+def playSpotify(query):
+    subprocess.run('start spotify:', shell=True)
+    time.sleep(5)  # espera o app abrir
+
+    devices = sp.devices()['devices']
+    if not devices:
+        print("Nenhum dispositivo ativo encontrado")
+        return
+
+    # Filtra apenas dispositivos que estão ativos
+    active_devices = [d for d in devices if d['is_active']]
+    if active_devices:
+        devices_id = active_devices[0]['id']
+    else:
+        # Se nenhum estiver ativo, usa o primeiro disponível
+        devices_id = devices[0]['id']
+
+    print("Usando device_id:", devices_id)
+
+    ##logica para pesquisar no device di e tocar musica
+
+    # Opcional: remover palavras comuns tipo "tocar", "no Spotify", "play"
+    words_to_remove = ["tocar", "play", "no spotify", "spotify"]
+    for word in words_to_remove:
+        query = query.lower().replace(word, "").strip()
+    print("Nome da música após limpeza:", query)
+
+    ##pesquisar musica no spotify
+    results = sp.search(q=query, type="track", limit=1)
+    if results['tracks']['items']:
+        track_uri = results['tracks']['items'][0]['uri']
+        track_name = results['tracks']['items'][0]['name']
+        track_artist = results['tracks']['items'][0]['artists'][0]['name']
+ 
+
+    else:
+        print("Música não encontrada no Spotify")
+        return
+
+    try:
+        sp.start_playback(device_id=devices_id, uris=[track_uri])
+        print(f"Tocando: {track_name} - {track_artist}")
+        speak("Tocando: " + track_name + " - " + track_artist + " no Spotify")
+    except spotipy.SpotifyException as e:
+        print("Erro ao tentar reproduzir:", e)
 
 
 
