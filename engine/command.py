@@ -7,6 +7,8 @@ import time
 
 
 
+
+
 def speak(text):   
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
@@ -19,17 +21,24 @@ def speak(text):
 
 @eel.expose
 def takeCommand():
+
+    
+    
+    
     r = sr.Recognizer()
+
     with sr.Microphone() as source:
-        print('listening...')
-        eel.DisplayMessage('listening...')
-        print('listening...')
+        print('Listening...')
+        eel.DisplayMessage('Listening...')
         r.pause_threshold = 1
-        r.adjust_for_ambient_noise(source)
+        r.adjust_for_ambient_noise(source, duration=0.2)
+
         try:
-            audio = r.listen(source, timeout=30, phrase_time_limit=6)
+            # Tempo menor evita travamento se o usuário não falar
+            audio = r.listen(source, timeout=5, phrase_time_limit=5)
         except sr.WaitTimeoutError:
             print("Listening timed out while waiting for phrase to start.")
+            eel.DisplayMessage("Listening timed out.")
             return ""
 
     try:
@@ -38,119 +47,115 @@ def takeCommand():
         query = r.recognize_google(audio, language='pt-br')
         print(f'User said: {query}\n')
         eel.DisplayMessage(query)
-        time.sleep(2)
-       
+        time.sleep(0.5)  # ⏳ reduzido pra resposta mais rápida
         return query
+
     except Exception as e:
         print("Could not recognize speech:", e)
+        eel.DisplayMessage("Não entendi, tente novamente.")
         return ""
     
 
 
 @eel.expose
 def allCommands(message=1):
+    
     from engine.features import findContact, whatsApp
+    
+    
 
-    while True:
-        if message == 1:
-            query = takeCommand()
-            print(query)
-            eel.senderText(query)
-        else:
-            query = message
-            eel.senderText(query)
+    # 🔁 Captura o comando
+    if message == 1:
+        query = takeCommand()
+        print(f"Usuário disse: {query}")
+        eel.senderText(query)
+    else:
+        query = message
+        eel.senderText(query)
 
-        try:
-            # abrir programas/sites
-            if "abrir" in query.lower():
-                from engine.features import openCommand
-                openCommand(query)
-
-            #### comandos spotify ####
-            elif "spotify" in query.lower() or "no spotify" in query.lower():
-                # tocar no spotify
-                if any(word in query.lower() for word in ["toca","joga","jogar", "tocar", "reproduzir"]):
-                    if "playlist" in query.lower() or "playlists" in query.lower():
-                        
-                        # tocar playlist
-                        from engine.spotify import play_playlist
-                        print("Spotify Play Playlist = " + query)
-                        play_playlist(query)
-                    else:
-                        # tocar música avulsa
-                        from engine.spotify import playSpotify
-                        print("Spotify Play Música = " + query)
-                        playSpotify(query)
-
-                # pausar musica no spotify
-                elif "pause" in query.lower() or "pausar" in query.lower() or "parar" in query.lower():                 
-                    from engine.spotify import pauseSpotify
-                    print("Spotify Pause = " + query)
-                    pauseSpotify()
-
-                # próxima música no spotify
-                elif "next" in query.lower() or "próxima" in query.lower() or "pular" in query.lower():
-                    from engine.spotify import next_track
-                    next_track()
-
-                # voltar música no spotify
-                elif "voltar" in query.lower() or "anterior" in query.lower() or "música anterior" in query.lower():
-                    from engine.spotify import previous_track
-                    previous_track()
-
-                # play / resume música no spotify
-                elif "play" in query.lower() or "resumir" in query.lower() or "continuar" in query.lower():
-                    from engine.spotify import resumeSpotify
-                    print("Spotify Resume função")
-                    resumeSpotify()
-
-            #### comandos youtube ####
-            elif "youtube" in query.lower():
-                if any(word in query.lower() for word in ["play", "tocar", "reproduzir"]):
-                    from engine.features import PlayYoutube
-                    print("YouTube Play = " + query)
-                    PlayYoutube(query)
-
-            #### comandos whatsapp ####
-            elif ("enviar mensagem" in query.lower() or 
-                  "mandar mensagem" in query.lower() or 
-                  "ligar" in query.lower() or 
-                  "fazer ligação" in query.lower() or
-                  "chamada de vídeo" in query.lower()):
-
-                contact_no, name = findContact(query)
-
-                if contact_no != 0:
-                    # Inicializa a flag e a mensagem
-                    flag = ""
-                    message_text = ""
-
-                    if "enviar mensagem" in query or "mandar mensagem" in query:
-                        print(query)
-                        flag = 'mensagem'
-                        speak("Qual mensagem você quer enviar?")
-                        message_text = takeCommand()  # captura a mensagem do usuário
-
-                    elif "ligar" in query or "fazer ligação" in query:
-                        flag = 'chamada de voz'
-
-                    elif "chamada de vídeo" in query or "vídeo" in query:
-                        flag = 'chamada de vídeo'
-
-                    # Chama a função whatsapp apenas uma vez, com os parâmetros corretos
-                    whatsApp(contact_no, message_text, flag, name)
-                else:
-                    speak("Não consegui encontrar esse contato.")
-
-            else:
-                speak("Desculpe, não entendi o comando. Pode repetir?")
-                continue  # volta a ouvir sem precisar chamar hotword
-
-        except Exception as e:
-            print("erro no comando", e)
-
+    if not query:
+        speak("Não ouvi nada, pode repetir?")
         eel.ShowHood()
-        break  # sai do loop depois de executar um comando válido
+        return
+
+    try:
+        comando_valido = False  # controla se algum comando foi executado
+
+        # 🧭 Abrir programas ou sites
+        if "abrir" in query.lower():
+            from engine.features import openCommand
+            openCommand(query)
+            comando_valido = True
+
+        # 🎵 Spotify
+        elif "spotify" in query.lower() or "no spotify" in query.lower():
+            if any(word in query.lower() for word in ["toca", "joga", "jogar", "tocar", "reproduzir"]):
+                if "playlist" in query.lower() or "playlists" in query.lower():
+                    from engine.spotify import play_playlist
+                    print("Spotify Play Playlist =", query)
+                    play_playlist(query)
+                else:
+                    from engine.spotify import playSpotify
+                    print("Spotify Play Música =", query)
+                    playSpotify(query)
+            elif any(word in query.lower() for word in ["pause", "pausar", "parar"]):
+                from engine.spotify import pauseSpotify
+                print("Spotify Pause =", query)
+                pauseSpotify()
+            elif any(word in query.lower() for word in ["next", "próxima", "pular"]):
+                from engine.spotify import next_track
+                next_track()
+            elif any(word in query.lower() for word in ["voltar", "anterior", "música anterior"]):
+                from engine.spotify import previous_track
+                previous_track()
+            elif any(word in query.lower() for word in ["play", "resumir", "continuar"]):
+                from engine.spotify import resumeSpotify
+                resumeSpotify()
+            comando_valido = True
+
+        # ▶️ YouTube
+        elif "youtube" in query.lower() and any(word in query.lower() for word in ["play", "tocar", "reproduzir"]):
+            from engine.features import PlayYoutube
+            print("YouTube Play =", query)
+            PlayYoutube(query)
+            comando_valido = True
+
+        # 💬 WhatsApp
+        elif any(word in query.lower() for word in [
+            "enviar mensagem", "mandar mensagem", "ligar", "fazer ligação", "chamada de vídeo"
+        ]):
+            contact_no, name = findContact(query)
+            if contact_no != 0:
+                flag = ""
+                message_text = ""
+                if "mensagem" in query:
+                    speak("Qual mensagem você quer enviar?")
+                    message_text = takeCommand()
+                    flag = 'mensagem'
+                elif "ligar" in query or "fazer ligação" in query:
+                    flag = 'chamada de voz'
+                elif "vídeo" in query:
+                    flag = 'chamada de vídeo'
+
+                whatsApp(contact_no, message_text, flag, name)
+            else:
+                speak("Não encontrei esse contato, Jéferson.")
+            comando_valido = True
+
+        # 🤔 Nenhum comando reconhecido
+        if not comando_valido:
+            speak("Desculpe, não entendi o comando. Pode tentar de novo?")
+            eel.ShowHood()
+            return  # evita loop infinito
+
+    except Exception as e:
+        print("Erro ao processar comando:", e)
+        speak("Houve um erro ao executar o comando, Jéferson.")
+        eel.ShowHood()
+        return
+
+    eel.ShowHood()  # volta a exibir interface normalmente
+
 
 
 

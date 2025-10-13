@@ -113,45 +113,79 @@ def PlayYoutube(query):
 
 # hot word detection
 
-def hotword():
-    porcupine=None
-    paud=None
-    audio_stream=None
-    try:
-       
-        # pre trained keywords    
-        porcupine=pvporcupine.create(keywords=["alexa"])
-        paud=pyaudio.PyAudio()
-        audio_stream=paud.open(rate=porcupine.sample_rate,channels=1,format=pyaudio.paInt16,input=True,frames_per_buffer=porcupine.frame_length)
-        
-        # loop for streaming
-        while True:
-            keyword=audio_stream.read(porcupine.frame_length)
-            keyword=struct.unpack_from("h"*porcupine.frame_length,keyword)
+def hotword(activate_q, done_q):
+    porcupine = pvporcupine.create(keywords=["alexa"])
 
-            # processing keyword comes from mic 
-            keyword_index=porcupine.process(keyword)
+    while True:
+        paud = None
+        audio_stream = None
 
-            # checking first keyword detetcted for not
-            if keyword_index>=0:
-                print("hotword detected")
+        try:
+            paud = pyaudio.PyAudio()
+            audio_stream = paud.open(rate=porcupine.sample_rate,
+                                     channels=1,
+                                     format=pyaudio.paInt16,
+                                     input=True,
+                                     frames_per_buffer=porcupine.frame_length)
 
-                # pressing shorcut key win+j
-                import pyautogui as autogui
-                autogui.keyDown("win")
-                autogui.press("j")
-                time.sleep(2)
-                autogui.keyUp("win")
-                 
-    
-                
-    except:
-        if porcupine is not None:
-            porcupine.delete()
-        if audio_stream is not None:
-            audio_stream.close()
-        if paud is not None:
-            paud.terminate()
+            print("Hotword: ouvindo...")
+
+            while True:
+                pcm = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
+                pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+                keyword_index = porcupine.process(pcm)
+
+                if keyword_index >= 0:
+                    print("Hotword detectada!")
+
+                    # fecha o microfone antes de enviar sinal
+                    try:
+                        audio_stream.stop_stream()
+                        audio_stream.close()
+                        paud.terminate()
+                    except Exception:
+                        pass
+
+                    # envia sinal para o processo principal
+                    activate_q.put('hotword')
+
+                    # aguarda resposta ou timeout
+                    try:
+                        msg = done_q.get(timeout=30)
+                        if msg == 'done':
+                            print("Main terminou. Voltando a ouvir hotword.")
+                    except Exception:
+                        print("Timeout esperando done. Reabrindo microfone mesmo assim.")
+                    finally:
+                        # 🔁 reabre o stream corretamente
+                        paud = pyaudio.PyAudio()
+                        audio_stream = paud.open(
+                            rate=porcupine.sample_rate,
+                            channels=1,
+                            format=pyaudio.paInt16,
+                            input=True,
+                            frames_per_buffer=porcupine.frame_length
+                        )
+                        print("🎙 Hotword ouvindo novamente...")
+
+                    # 🔁 sai do loop interno e reabre o microfone
+                    break
+
+        except Exception as e:
+            print(f"Erro no hotword loop: {e}")
+            time.sleep(1)
+
+        finally:
+            try:
+                if audio_stream is not None:
+                    audio_stream.close()
+                if paud is not None:
+                    paud.terminate()
+            except:
+                pass
+
+        # 🔁 volta ao loop principal e reabre o microfone
+        time.sleep(0.3)
 
 
 # find contacts

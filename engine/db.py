@@ -2,7 +2,7 @@ import sqlite3
 import csv
 
 
-con = sqlite3.connect('sexta-feira.db')
+con = sqlite3.connect('sexta-feira.db', check_same_thread=False)
 
 
 cursor = con.cursor()
