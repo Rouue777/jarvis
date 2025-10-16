@@ -102,9 +102,10 @@ def resumeSpotify():
     device_id = active_device['id']
     
     try:
+        speak("Retomando sua música no Spotify")
         sp.start_playback(device_id=device_id)
         print("Música retomada no Spotify")
-        speak("Retomando sua música no Spotify")
+        
     except Exception as e:
         print("Erro ao retomar a música:", e)
         speak("Não consegui retomar a música no Spotify")

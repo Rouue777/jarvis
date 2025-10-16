@@ -2,7 +2,7 @@ import pyttsx3
 import speech_recognition as sr
 import eel
 import time
-
+from engine.gemini import chat_with_gemini
 
 
 
@@ -13,7 +13,7 @@ def speak(text):
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
     engine.setProperty('voice', voices[0].id)  # Change index to change voices. 0 for
-    engine.setProperty('rate', 200)  # Speed percent (can go over 100)
+    engine.setProperty('rate', 240)  # Speed percent (can go over 100)
     eel.DisplayMessage(text)
     engine.say(text)
     eel.receiverText(text)
@@ -82,7 +82,15 @@ def allCommands(message=1):
         comando_valido = False  # controla se algum comando foi executado
 
         # 🧭 Abrir programas ou sites
-        if "abrir" in query.lower():
+        if "sexta-feira" in query.lower():
+            print(query)
+            response = chat_with_gemini(query)
+            speak(response)
+
+            comando_valido = True
+           
+
+        elif "abrir" in query.lower():
             from engine.features import openCommand
             openCommand(query)
             comando_valido = True
