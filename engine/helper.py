@@ -5,11 +5,12 @@ from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 
 def extract_yt_term(command):
+        
 	# Regex para pegar frases como "tocar X no youtube" ou "toque X no youtube"
 	pattern = r'(?:tocar|toque|reproduzir|play)\s+(.*?)\s+no\s+youtube'
 	match = re.search(pattern, command, re.IGNORECASE)
 	return match.group(1) if match else ""
-
+    
 
 
 def remove_words(input_string, words_to_remove):

@@ -19,51 +19,62 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
 
 
 ## play em musica no spotify
-def playSpotify(query):
+def playSpotify(song=None, artist=None):
+     
     subprocess.run('start spotify:', shell=True)
-    time.sleep(5)  # espera o app abrir
+    time.sleep(5)
 
-    devices = sp.devices()['devices']
+    devices = sp.devices().get('devices', [])
     if not devices:
         print("Nenhum dispositivo ativo encontrado")
         return
 
-    # Filtra apenas dispositivos que estão ativos
     active_devices = [d for d in devices if d['is_active']]
-    if active_devices:
-        devices_id = active_devices[0]['id']
-    else:
-        # Se nenhum estiver ativo, usa o primeiro disponível
-        devices_id = devices[0]['id']
+    device_id = active_devices[0]['id'] if active_devices else devices[0]['id']
+    print("Usando device_id:", device_id)
 
-    print("Usando device_id:", devices_id)
+    # 🔍 MELHORIA 1 — Busca mais específica se tiver artista
+    
+    search_query = song
+    if artist:
+        search_query += f" artist:{artist}"
+            
+    
+    
+    print("Buscando no Spotify:", search_query)
 
-    ##logica para pesquisar no device di e tocar musica
+    # 🔍 MELHORIA 2 — Aumenta o limite para verificar mais resultados
+    results = sp.search(q=search_query, type="track", market="BR", limit=5)
 
-    # Opcional: remover palavras comuns tipo "tocar", "no Spotify", "play"
-    words_to_remove = ["tocar", "play", "no spotify", "spotify"]
-    for word in words_to_remove:
-        query = query.lower().replace(word, "").strip()
-    print("Nome da música após limpeza:", query)
+    if not results['tracks']['items']:
+        print("Música não encontrada. Tentando busca mais ampla...")
+        results = sp.search(q=song, type="track", market="BR", limit=5)
 
-    ##pesquisar musica no spotify
-    results = sp.search(q=query, type="track", limit=1)
-    if results['tracks']['items']:
-        track_uri = results['tracks']['items'][0]['uri']
-        track_name = results['tracks']['items'][0]['name']
-        track_artist = results['tracks']['items'][0]['artists'][0]['name']
- 
+    # 🔍 MELHORIA 3 — Pega a primeira que realmente bate com o nome e artista
+    track = None
+    for item in results['tracks']['items']:
+        name_match = song.lower() in item['name'].lower()
+        artist_match = artist and artist.lower() in item['artists'][0]['name'].lower()
+        if name_match and (not artist or artist_match):
+            track = item
+            break
 
-    else:
-        print("Música não encontrada no Spotify")
+    if not track:
+        print("Nenhum resultado relevante encontrado.")
+        speak("Não encontrei essa música no Spotify.")
         return
 
+    track_uri = track['uri']
+    track_name = track['name']
+    track_artist = track['artists'][0]['name']
+
     try:
-        sp.start_playback(device_id=devices_id, uris=[track_uri])
+        sp.start_playback(device_id=device_id, uris=[track_uri])
         print(f"Tocando: {track_name} - {track_artist}")
-        speak("Tocando: " + track_name + " - " + track_artist + " no Spotify")
+        speak(f"Tocando {track_name} de {track_artist} no Spotify.")
     except spotipy.SpotifyException as e:
         print("Erro ao tentar reproduzir:", e)
+
 
 
 ##funcionalidade pausar musica no spotify
@@ -214,6 +225,26 @@ def play_playlist(query):
         print("Erro ao tentar reproduzir a playlist:", e)
 
 
+def setSpotifyVolume(volume_percent):
+    print(volume_percent)
+    devices = sp.devices().get('devices', [])
+    
+    if not devices:
+        print("Nenhum dispositivo encontrado.")
+        return
 
 
+ ### pega o dispositivo ativo ou o primeiro da lista
+    active_device = next((d for d in devices if d['is_active']), devices[0])
+    device_id = active_device['id']
 
+    ##garante que o volume esteja entre 0 e 100
+    volume_percent = max(0, min(volume_percent, 100))
+
+    try:
+        sp.volume(volume_percent, device_id=device_id)
+        speak(f"Volume definido para {volume_percent} por cento no Spotify.")
+        print(f"Volume definido para {volume_percent}% no dispositivo {active_device['name']}")
+    except spotipy.SpotifyException as e:
+        speak("Não consegui ajustar o volume no Spotify.")
+        print("Erro ao ajustar volume:", e)

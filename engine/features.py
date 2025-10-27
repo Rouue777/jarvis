@@ -38,35 +38,34 @@ def playAssistantSound():
 	playsound(music_dir)
 
 def openCommand(query):
+    print("Query antes da limpeza:", query)
     # Normaliza
     query = query.lower()
     query = query.replace(ASSISTANT_NAME.lower(), "")
     query = query.replace("abrir", "")
     query = query.strip()
 
-    # Remove palavras irrelevantes (stopwords)
-    stopwords = ["o", "no", "na", "a", "um", "uma", "os", "as", "de", "do", "da"]
-    tokens = [t for t in query.split() if t not in stopwords]
-    app_name = " ".join(tokens)
+    print("Comando após limpeza:", query)
+   
 
-    if not app_name:
+    if not query:
         speak("não entendi o que você quer abrir")
         return
 
     try:
         # 1 - Busca direta no banco (LIKE)
-        cursor.execute("SELECT path FROM sys_command WHERE name LIKE ?", (f"%{app_name}%",))
+        cursor.execute("SELECT path FROM sys_command WHERE name LIKE ?", query)
         results = cursor.fetchall()
         if results:
-            speak(f"abrindo {app_name}")
+            speak(f"abrindo {query}")
             os.startfile(results[0][0])
             return
 
         # 2 - Busca site no banco (LIKE)
-        cursor.execute("SELECT url FROM web_command WHERE name LIKE ?", (f"%{app_name}%",))
+        cursor.execute("SELECT url FROM web_command WHERE name LIKE ?", (f"%{query}%",))
         results = cursor.fetchall()
         if results:
-            speak(f"abrindo {app_name}")
+            speak(f"abrindo {query}")
             webbrowser.open(results[0][0])
             return
 
@@ -74,7 +73,7 @@ def openCommand(query):
         cursor.execute("SELECT name, path FROM sys_command")
         apps = cursor.fetchall()
         if apps:
-            best_match = process.extractOne(app_name, [a[0] for a in apps])
+            best_match = process.extractOne(query, [a[0] for a in apps])
             if best_match and best_match[1] > 80:  # 80% de similaridade
                 index = [a[0] for a in apps].index(best_match[0])
                 path = apps[index][1]
@@ -87,7 +86,7 @@ def openCommand(query):
         cursor.execute("SELECT name, url FROM web_command")
         sites = cursor.fetchall()
         if sites:
-            best_match = process.extractOne(app_name, [s[0] for s in sites])
+            best_match = process.extractOne(query, [s[0] for s in sites])
             if best_match and best_match[1] > 80:  # 80% de similaridade
                 index = [s[0] for s in sites].index(best_match[0])
                 url = sites[index][1]
@@ -96,13 +95,12 @@ def openCommand(query):
                 return
 
         # 5 - Última tentativa: abrir pelo Windows
-        speak(f"abrindo {app_name}")
-        os.system(f'start {app_name}')
+        speak(f"abrindo {query}")
+        os.system(f'start {query}')
 
     except Exception as e:
         speak("algo deu errado")
-        print("Erro:", e)
-
+        print("Erro:", e) 
 def PlayYoutube(query):
     search_term = extract_yt_term(query)
     speak("Reproduzindo "+search_term+" no YouTube")
