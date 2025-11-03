@@ -22,6 +22,8 @@ import pyautogui
 from engine.spotify import sp
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+import json
+from vosk import Model, KaldiRecognizer
 
 
 con = sqlite3.connect('sexta-feira.db')
@@ -112,78 +114,34 @@ def PlayYoutube(query):
 # hot word detection
 
 def hotword(activate_q, done_q):
-    porcupine = pvporcupine.create(keywords=["alexa"])
+    model_path = r"C:\\Users\\Rouue\\Desktop\\jarvis\\vosk-model-small-pt-0.3"
+    # caminho exato até a pasta do modelo
+    model = Model(model_path)
+    recognizer = KaldiRecognizer(model, 16000)
+
+    mic = pyaudio.PyAudio()
+    stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16,
+                      input=True, frames_per_buffer=4096)
+    stream.start_stream()
+
+    print("🎙 Ouvindo... diga 'sexta-feira' para ativar")
 
     while True:
-        paud = None
-        audio_stream = None
+        data = stream.read(4096, exception_on_overflow=False)
+        if recognizer.AcceptWaveform(data):
+            result = json.loads(recognizer.Result())
+            text = result.get("text", "").lower()
 
-        try:
-            paud = pyaudio.PyAudio()
-            audio_stream = paud.open(rate=porcupine.sample_rate,
-                                     channels=1,
-                                     format=pyaudio.paInt16,
-                                     input=True,
-                                     frames_per_buffer=porcupine.frame_length)
+            if "sexta" in text or "sexta-feira" in text or "cesta" in text or "sexta feia" in text or "sextafeira" in text or "sexta feira" in text or "sexta f" in text or "cesta feira" in text  or "feira" in text  :
+                print("✅ Hotword detectada!")
+                activate_q.put('hotword')
 
-            print("Hotword: ouvindo...")
-
-            while True:
-                pcm = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
-                pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
-                keyword_index = porcupine.process(pcm)
-
-                if keyword_index >= 0:
-                    print("Hotword detectada!")
-
-                    # fecha o microfone antes de enviar sinal
-                    try:
-                        audio_stream.stop_stream()
-                        audio_stream.close()
-                        paud.terminate()
-                    except Exception:
-                        pass
-
-                    # envia sinal para o processo principal
-                    activate_q.put('hotword')
-
-                    # aguarda resposta ou timeout
-                    try:
-                        msg = done_q.get(timeout=30)
-                        if msg == 'done':
-                            print("Main terminou. Voltando a ouvir hotword.")
-                    except Exception:
-                        print("Timeout esperando done. Reabrindo microfone mesmo assim.")
-                    finally:
-                        # 🔁 reabre o stream corretamente
-                        paud = pyaudio.PyAudio()
-                        audio_stream = paud.open(
-                            rate=porcupine.sample_rate,
-                            channels=1,
-                            format=pyaudio.paInt16,
-                            input=True,
-                            frames_per_buffer=porcupine.frame_length
-                        )
-                        print("🎙 Hotword ouvindo novamente...")
-
-                    # 🔁 sai do loop interno e reabre o microfone
-                    break
-
-        except Exception as e:
-            print(f"Erro no hotword loop: {e}")
-            time.sleep(1)
-
-        finally:
-            try:
-                if audio_stream is not None:
-                    audio_stream.close()
-                if paud is not None:
-                    paud.terminate()
-            except:
-                pass
-
-        # 🔁 volta ao loop principal e reabre o microfone
-        time.sleep(0.3)
+                try:
+                    msg = done_q.get(timeout=30)
+                    if msg == 'done':
+                        print("Main terminou. Voltando a ouvir hotword.")
+                except:
+                    print("Timeout esperando done. Reabrindo microfone mesmo assim.")
 
 
 # find contacts

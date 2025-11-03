@@ -83,122 +83,119 @@ def allCommands(message=1):
         comando_valido = False  # controla se algum comando foi executado
         
         # 🧭 Abrir programas ou sites
-        if "sexta-feira" in query.lower() or "sexta" in query.lower() or "cesta" in query.lower():
+        
+        ##importações necessarias
+        from engine.spotify import play_playlist, pauseSpotify, previous_track, next_track, resumeSpotify, playSpotify, setSpotifyVolume
+        from engine.features import openCommand, PlayYoutube
+        from engine.gemini import chat_with_gemini
+        print("query :" + query)
+        response_chat = chat_with_gemini(query)
+        print("resposta do chat ", response_chat)
+        data = json.loads(response_chat)
+        print("dados apos a limpeza : ", data)
 
-            ##importações necessarias
-            from engine.spotify import play_playlist, pauseSpotify, previous_track, next_track, resumeSpotify, playSpotify, setSpotifyVolume
-            from engine.features import openCommand, PlayYoutube
-            from engine.gemini import chat_with_gemini
-            print("query :" + query)
-            response_chat = chat_with_gemini(query)
-            print("resposta do chat ", response_chat)
-            data = json.loads(response_chat)
-            print("dados apos a limpeza : ", data)
+        action = data.get("action")
+        params = data.get("parameters")
+        
+        print("action localizada : " + action)
+        if action == "chat":
+            text = params.get("text", "")
+            print("oque é dito pela assistente : " +text)
+            speak(text)
 
-            action = data.get("action")
-            params = data.get("parameters")
-            
-            print("action localizada : " + action)
-            if action == "chat":
-                text = params.get("text", "")
-                print("oque é dito pela assistente : " +text)
-                speak(text)
-
-            # 💻 Abrir programas ou sites
-            elif action == "abrir_programa":
-                program = params.get("program", "")
-                if program:
-                    openCommand(program)
-                else:
-                    speak("Não consegui entender qual programa você quer abrir.")
-
-            ## abrir lol
-            elif action == "open_lol":
-                print(action)
-                program = "league of legends"
+        # 💻 Abrir programas ou sites
+        elif action == "abrir_programa":
+            program = params.get("program", "")
+            if program:
                 openCommand(program)
-
-            # 🎵 SPOTIFY
-            elif action == "spotify_play":
-                song = params.get("song", "")
-                artist = params.get("artist", "")
-                playlist = params.get("playlist", "")
-                if playlist:
-                    play_playlist(playlist)
-                elif song:
-                    playSpotify(song, artist)
-                else:
-                    speak("Não entendi qual música ou playlist você quer ouvir.")
-
-            elif action == "spotify_pause":
-                pauseSpotify()
-
-            elif action == "spotify_next":
-                next_track()
-
-            elif action == "spotify_previous":
-                previous_track()
-
-            elif action == "spotify_resume":
-                resumeSpotify()
-
-            elif action == "spotify_volume":
-                print(action)               
-                volume = params.get("volume", "")
-                volume_int = int(volume)
-                setSpotifyVolume(volume_int)
-
-                
-
-            # ▶️ YouTube
-            elif action == "youtube_play":
-                query = params.get("query", "")
-                if query:
-                    PlayYoutube(query)
-                else:
-                    speak("Não entendi qual vídeo você quer assistir.")
-
-            # 💬 WhatsApp
-            elif action == "enviar_mensagem":
-                contact_name = params.get("contact_name", "")
-                message_text = params.get("message", "")
-                contact_no, name = findContact(contact_name)
-                if contact_no:
-                    whatsApp(contact_no, message_text, "mensagem", name)
-                else:
-                    speak("Não encontrei esse contato, Jéferson.")
-
-            elif action == "fazer_ligacao":
-                contact_name = params.get("contact_name", "")
-                contact_no, name = findContact(contact_name)
-                if contact_no:
-                    whatsApp(contact_no, "", "chamada de voz", name)
-                else:
-                    speak("Não encontrei esse contato, Jéferson.")
-
-            elif action == "video_call":
-                contact_name = params.get("contact_name", "")
-                contact_no, name = findContact(contact_name)
-                if contact_no:
-                    whatsApp(contact_no, "", "chamada de vídeo", name)
-                else:
-                    speak("Não encontrei esse contato, Jéferson.")
-
-            # 🚨 Caso o Gemini retorne uma action ainda não mapeada
             else:
-                speak("Ainda não sei como executar esse tipo de comando.")
+                speak("Não consegui entender qual programa você quer abrir.")
 
-                # 🤔 Nenhum comando reconhecido
-                if not comando_valido:
-                    speak("Desculpe, não entendi o comando. Pode tentar de novo?")
-                    eel.ShowHood()
-                    return  # evita loop infinito
+        ## abrir lol
+        elif action == "open_lol":
+            print(action)
+            program = "league of legends"
+            openCommand(program)
+
+        # 🎵 SPOTIFY
+        elif action == "spotify_play":
+            song = params.get("song", "")
+            artist = params.get("artist", "")
+            playlist = params.get("playlist", "")
+            if playlist:
+                play_playlist(playlist)
+            elif song:
+                playSpotify(song, artist)
+            else:
+                speak("Não entendi qual música ou playlist você quer ouvir.")
+
+        elif action == "spotify_pause":
+            pauseSpotify()
+
+        elif action == "spotify_next":
+            next_track()
+
+        elif action == "spotify_previous":
+            previous_track()
+
+        elif action == "spotify_resume":
+            resumeSpotify()
+
+        elif action == "spotify_volume":
+            print(action)               
+            volume = params.get("volume", "")
+            volume_int = int(volume)
+            setSpotifyVolume(volume_int)
+
+            
+
+        # ▶️ YouTube
+        elif action == "youtube_play":
+            query = params.get("query", "")
+            if query:
+                PlayYoutube(query)
+            else:
+                speak("Não entendi qual vídeo você quer assistir.")
+
+        # 💬 WhatsApp
+        elif action == "enviar_mensagem":
+            contact_name = params.get("contact_name", "")
+            message_text = params.get("message", "")
+            contact_no, name = findContact(contact_name)
+            if contact_no:
+                whatsApp(contact_no, message_text, "mensagem", name)
+            else:
+                speak("Não encontrei esse contato, Jéferson.")
+
+        elif action == "fazer_ligacao":
+            contact_name = params.get("contact_name", "")
+            contact_no, name = findContact(contact_name)
+            if contact_no:
+                whatsApp(contact_no, "", "chamada de voz", name)
+            else:
+                speak("Não encontrei esse contato, Jéferson.")
+
+        elif action == "video_call":
+            contact_name = params.get("contact_name", "")
+            contact_no, name = findContact(contact_name)
+            if contact_no:
+                whatsApp(contact_no, "", "chamada de vídeo", name)
+            else:
+                speak("Não encontrei esse contato, Jéferson.")
+
+        # 🚨 Caso o Gemini retorne uma action ainda não mapeada
+        else:
+            speak("Ainda não sei como executar esse tipo de comando.")
+
+            # 🤔 Nenhum comando reconhecido
+            if not comando_valido:
+                speak("Desculpe, não entendi o comando. Pode tentar de novo?")
+                eel.ShowHood()
+                return  # evita loop infinito
             
 
            
-        else : 
-            speak("você precisa me chamar pelo nome, que é... sexta-feira")
-            print("você não falou 'sexta-feira' ")
+
             
             ##Define o que fazer de acordo com a ação retornada pela IA"""
     

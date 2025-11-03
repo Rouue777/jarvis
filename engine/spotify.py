@@ -193,11 +193,6 @@ def play_playlist(query):
 
     print("Usando device_id:", devices_id)
 
-    # 🧹 Limpa o texto do comando
-    words_to_remove = ["tocar", "no spotify", "spotify", "playlist", "playlists"]
-    for word in words_to_remove:
-        query = query.lower().replace(word, "").strip()
-    print("Nome da playlist após limpeza:", query)
 
     # 🎯 Verifica se o nome da playlist está no dicionário personalizado
     if query in playlists:
